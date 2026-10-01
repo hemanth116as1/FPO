@@ -57,7 +57,7 @@ export default function ForgotPassword() {
 
                     setOtpError("");
                     try {
-                        const response = await fetch("/login/api/auth/verifyOTP", {
+                        const response = await fetch("/api/otpservices/verifyOTP", {
                             method: "POST",
                             headers: {
                                 "Content-Type": "application/json",

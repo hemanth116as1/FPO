@@ -8,30 +8,88 @@ datasource db {
   provider = "postgresql"
 }
 
-enum Role {
-  USER
-  ADMIN
-  SUPERADMIN
-}
 model User {
-  id        String   @id @default(uuid())
-  name      String?
-  email     String?  @unique
-  mobile    String?  @unique
-  password  String?
-  role      Role     @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String    @id
+  name            String
+  email           String
+  emailVerified   Boolean   @default(false)
+  image           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  username        String?
+  displayUsername String?
+  role            String?
+  banned          Boolean?  @default(false)
+  banReason       String?
+  banExpires      DateTime?
+  mobile          String    @unique
+  sessions        Session[]
+  accounts        Account[]
 
   milkRecords MilkRecord[]
   otps        OTP[]
 
+  @@unique([email])
+  @@unique([username])
+  @@map("user")
+}
+
+model Session {
+  id             String   @id
+  expiresAt      DateTime
+  token          String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  impersonatedBy String?
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  mobile String
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
 }
 
 enum TimeType {
   Morning
   Evening
 }
+
 model MilkRecord {
   id        String   @id @default(uuid())
   userId    String
@@ -43,7 +101,6 @@ model MilkRecord {
   updatedAt DateTime @updatedAt
 }
 
-
 model OTP {
   id        String   @id @default(uuid())
   mobile    String
@@ -52,5 +109,3 @@ model OTP {
   createdAt DateTime @default(now())
 
 }
-
-
