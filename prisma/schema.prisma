@@ -22,16 +22,18 @@ model User {
   banned          Boolean?  @default(false)
   banReason       String?
   banExpires      DateTime?
-  mobile          String    @unique
   sessions        Session[]
   accounts        Account[]
 
   milkRecords MilkRecord[]
-  otps        OTP[]
+
+  phoneNumber         String?
+  phoneNumberVerified Boolean?
 
   @@unique([email])
   @@unique([username])
   @@map("user")
+  @@unique([phoneNumber])
 }
 
 model Session {
@@ -67,8 +69,6 @@ model Account {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  mobile String
-
   @@index([userId])
   @@map("account")
 }
@@ -94,18 +94,11 @@ model MilkRecord {
   id        String   @id @default(uuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id])
+  SNF       Float    @default(0.0)
+  fat       Float   @default(0.0)   
   date      DateTime
   quantity  Float
   TimeType  TimeType
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-model OTP {
-  id        String   @id @default(uuid())
-  mobile    String
-  user      User     @relation(fields: [mobile], references: [mobile])
-  otp       String
-  createdAt DateTime @default(now())
-
 }

@@ -1,27 +1,53 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import prisma from "@/lib/prisma"; 
-import {username} from "better-auth/plugins"
-import { admin } from "better-auth/plugins";
-import {ac,basicUser,adminRole,superAdmin} from "@/app/api/auth/permissions"
+import {sendOTP} from "@/lib/twilio";
+import {
+  username,
+  admin,
+  phoneNumber,
+} from "better-auth/plugins";
+
+import prisma from "@/lib/prisma";
+
+import {
+  ac,
+  basicUser,
+  adminRole,
+  superAdmin,
+} from "@/app/api/auth/permissions";
+
 export const auth = betterAuth({
-    database: prismaAdapter(prisma, {
-        provider: "postgresql", 
+  database: prismaAdapter(prisma, {
+    provider: "postgresql",
+  }),
+
+  plugins: [
+    username({
+      immutableUsername: false,
     }),
-    emailAndPassword: {
-        enabled: true,
-    },
-    account: {
-        additionalFields: {
-            mobile: {
-                type: "string",
-                required: true,
-                input: true,
-            },
-        },
-    },
-    plugins: [ 
-        username({ immutableUsername: false, }), 
-        admin({ ac, roles: { BASIC_USER: basicUser, ADMIN: adminRole, SUPER_ADMIN: superAdmin, }, 
-        defaultRole: "BASIC_USER", }), ],
-})
+
+    admin({
+      ac,
+      roles: {
+        BASIC_USER: basicUser,
+        ADMIN: adminRole,
+        SUPER_ADMIN: superAdmin,
+      },
+      defaultRole: "BASIC_USER",
+    }),
+
+    phoneNumber({
+      sendOTP: async ({ phoneNumber, code }) => {
+        await sendOTP(phoneNumber, code);
+      },
+      sendPasswordResetOTP: async ({ phoneNumber, code }) => {
+        await sendOTP(phoneNumber, code);
+      },
+      signUpOnVerification: {
+        getTempEmail: (phoneNumber) =>
+          `phone-${phoneNumber.replace(/\D/g, "")}@users.fpo.invalid`,
+        getTempName: (phoneNumber) => phoneNumber,
+      },
+    }),
+  ],
+});
