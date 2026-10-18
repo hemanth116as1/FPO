@@ -6,6 +6,7 @@ import styles from "../../home/Home.module.css";
 type MilkRecord = {
   id: string;
   date: string;
+  userName?: string;
   quantity: number;
   TimeType: "Morning" | "Evening";
   SNF:number,
@@ -35,6 +36,7 @@ function isMilkRecord(value: unknown): value is MilkRecord {
     typeof record.id === "string" &&
     typeof record.date === "string" &&
     typeof record.quantity === "number" &&
+    (record.userName === undefined || typeof record.userName === "string") &&
     (record.TimeType === "Morning" || record.TimeType === "Evening")
   );
 }
@@ -56,6 +58,7 @@ function todayDateValue() {
 
 export default function MilkRecordsPage() {
   const [records, setRecords] = useState<MilkRecord[]>([]);
+  const [showUserName, setShowUserName] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -97,6 +100,8 @@ export default function MilkRecordsPage() {
           throw new Error("The milk records response was invalid.");
         }
         setRecords(result);
+        setShowUserName(response.headers.get("X-Show-User-Name") === "true");
+        console.log("showUserName:", showUserName);
       } catch (cause) {
         if (cause instanceof Error && cause.name === "AbortError") return;
         console.error("Error loading milk records:", cause);
@@ -322,6 +327,8 @@ export default function MilkRecordsPage() {
             <thead>
               <tr>
                 <th scope="col">Date</th>
+                {
+                showUserName && <th scope="col">User name</th>}
                 <th scope="col" className={styles.measurementCell}>Fat</th>
                 <th scope="col" className={styles.measurementCell}>SNF</th>
                 <th scope="col">Milking</th>
@@ -348,6 +355,7 @@ export default function MilkRecordsPage() {
                         new Date(record.date).toLocaleDateString()
                       )}
                     </td>
+                    {showUserName && <td>{record.userName ?? ""}</td>}
                     <td className={styles.measurementCell}>
                       {isEditing ? (
                         <input

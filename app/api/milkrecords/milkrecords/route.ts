@@ -1,8 +1,11 @@
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { revalidateTag } from "next/cache";
-import {NextRequest, NextResponse} from "next/server";
-import getCachedMilkRecords, { tagMilkRecordsCache } from "./cache-milk-records";
+import {NextRequest} from "next/server";
+import getCachedMilkRecords, {
+  tagAllMilkRecordsCache,
+  tagMilkRecordsCache,
+} from "./cache-milk-records";
 type RecordValues = {
   date: Date;
   quantity: number;
@@ -42,7 +45,7 @@ function parseRecordValues(
 }
 
 export async function GET(request: NextRequest) {
-  var pagenumber = request.nextUrl.searchParams.get("page") ? (parseInt(request.nextUrl.searchParams.get("page") as string)) : 1;
+  let pagenumber = request.nextUrl.searchParams.get("page") ? (parseInt(request.nextUrl.searchParams.get("page") as string)) : 1;
   if (pagenumber < 1) {
     pagenumber = 1;
   }
@@ -52,10 +55,20 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const milkRecords = await getCachedMilkRecords(session.user.id,pagenumber);
-    return Response.json(milkRecords, {
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+    const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+    const { records, showUserName } = await getCachedMilkRecords(
+      session.user.id,
+      pagenumber,
+      isAdmin,
+    );
+    return Response.json(records, {
       headers: {
         "Cache-Control": "private, no-cache",
+        "X-Show-User-Name": String(showUserName),
       },
     });
   } catch (error) {
@@ -106,10 +119,19 @@ export async function POST(request: Request) {
         userId: session.user.id,
         ...values.data,
       },
+      include: {
+        user: {
+          select: {
+            name: true,
+          },
+        },
+      },
     });
 
     revalidateTag(tagMilkRecordsCache(session.user.id), { expire: 0 });
-    return Response.json(record, { status: 201 });
+    revalidateTag(tagAllMilkRecordsCache(), { expire: 0 });
+    const { user, ...recordData } = record;
+    return Response.json({ ...recordData, userName: user.name }, { status: 201 });
   } catch (error) {
     console.error("Error creating milk record:", error);
     return Response.json(
@@ -167,13 +189,22 @@ export async function PUT(request: Request) {
 
     const record = await prisma.milkRecord.findFirst({
       where: { id: recordId, userId: session.user.id },
+      include: {
+        user: {
+          select: {
+            name: true,
+          },
+        },
+      },
     });
     if (!record) {
       return Response.json({ error: "Milk record not found." }, { status: 404 });
     }
 
     revalidateTag(tagMilkRecordsCache(session.user.id), { expire: 0 });
-    return Response.json(record);
+    revalidateTag(tagAllMilkRecordsCache(), { expire: 0 });
+    const { user, ...recordData } = record;
+    return Response.json({ ...recordData, userName: user.name });
   } catch (error) {
     console.error("Error updating milk record:", error);
     return Response.json({ error: "Unable to update milk record." }, { status: 500 });
@@ -229,6 +260,7 @@ export async function DELETE(request: Request) {
     }
 
     revalidateTag(tagMilkRecordsCache(session.user.id), { expire: 0 });
+    revalidateTag(tagAllMilkRecordsCache(), { expire: 0 });
     return Response.json({ success: true });
   } catch (error) {
     console.error("Error deleting milk record:", error);
