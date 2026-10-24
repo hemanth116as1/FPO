@@ -7,7 +7,7 @@ export function tagUserRecords(page:number) {
 }
 
 export default async function getCachedUserRecords(
-    userId: string,
+    username: string,
     phone :string,
     pagenumber: number,
 ) {
@@ -17,8 +17,8 @@ export default async function getCachedUserRecords(
     cacheTag(tag); // Tag the cache for invalidation
     const records = await prisma.user.findMany({
         where: {
-            userId: userId ? {
-                contains:userId
+            username: username ? {
+                contains: username
             } : undefined,
             phoneNumber :phone?{
                 contains:phone

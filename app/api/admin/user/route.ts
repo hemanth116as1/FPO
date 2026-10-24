@@ -1,10 +1,8 @@
 import "dotenv/config";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { json } from "better-auth";
 import { NextRequest } from "next/server";
 import getCachedUserRecords from "./cache-user-records"
-import { tagUserRecords } from "./cache-user-records";
 
 function normalizeIndianPhoneNumber(input: string) {
   const digits = input.replace(/\D/g, "");
@@ -136,13 +134,30 @@ export async function POST(request: Request) {
 
         return existingUser;
     });
+
+    return Response.json(user);
 }
 export async function GET(request :NextRequest){
-    let pagenumber = request.nextUrl.searchParams.get("page") ? (parseInt(request.nextUrl.searchParams.get("page") as string)) : 1;
-    let userId = request.nextUrl.searchParams.get("username") ? (request.nextUrl.searchParams.get("username") as string) : "";
-    let mobile = request.nextUrl.searchParams.get("mobile") ? (request.nextUrl.searchParams.get("mobile") as string) : "null";
-    const response = await getCachedUserRecords(userId,mobile,pagenumber);
+    const session = await auth.api.getSession({ headers: request.headers });
+    if (!session){
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const permission = await auth.api.userHasPermission({
+        body: { permissions: { users: ["create"] } },
+        headers: request.headers,
+      });
+      if (!permission.success) {
+        return Response.json(
+          { error: "You do not have permission to create milk records." },
+          { status: 403 },
+        );
+      } 
+    const pagenumber = request.nextUrl.searchParams.get("page")
+        ? parseInt(request.nextUrl.searchParams.get("page") as string)
+        : 1;
+    const username = request.nextUrl.searchParams.get("username") ?? "";
+    const mobile = request.nextUrl.searchParams.get("mobile") ?? "";
+    const response = await getCachedUserRecords(username, mobile, pagenumber);
+    return Response.json(response.records);
     
-
-
 }

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import AddUser from "./AddUser";
 
 type AppRole = "BASIC_USER" | "ADMIN" | "SUPER_ADMIN";
 
@@ -36,6 +37,6 @@ export default function AddUserPage() {
   }
 
   return (
-<h1>Add User</h1>
+<AddUser/>
   );
 }
