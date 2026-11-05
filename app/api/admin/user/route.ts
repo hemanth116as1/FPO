@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { NextRequest } from "next/server";
 import getCachedUserRecords from "./cache-user-records"
+import { getPermission } from "@/lib/check-permissions";
 
 function normalizeIndianPhoneNumber(input: string) {
   const digits = input.replace(/\D/g, "");
@@ -148,7 +149,7 @@ export async function GET(request :NextRequest){
       });
       if (!permission.success) {
         return Response.json(
-          { error: "You do not have permission to create milk records." },
+          { error: "MF .You do not have permission to create User records.Fuck off" },
           { status: 403 },
         );
       } 
@@ -160,4 +161,75 @@ export async function GET(request :NextRequest){
     const response = await getCachedUserRecords(username, mobile, pagenumber);
     return Response.json(response.records);
     
+}
+export async function DELETE(request:NextRequest) {
+    const permission = await getPermission("delete",request.headers)
+    if (!permission.success){
+        return Response.json(
+          { error: "Really !You do not have permission to delete user record.Fuck off from here" },
+          { status: 403 },
+        );
+    }
+    const body = await request.json();
+    const {ids} = body;
+    const response = await prisma.user.deleteMany(
+        {
+            where:{
+                id : {
+                    in: ids,
+                }
+            }
+        }
+    )
+    return Response.json({message:"User deleted successfully",deletedCount:response.count})
+    
+}
+
+export async function PUT(request:NextRequest){
+    const permission = await getPermission("update",request.headers)
+    if (!permission.success){
+        return Response.json(
+          { error: "Really !You do not have permission to update user record.Fuck off from here" },
+          { status: 403 },
+        );
+    }
+    let body: unknown;
+    try {
+        body = await request.json();
+    } catch {
+        return Response.json({ error: "Request body must be valid JSON." }, { status: 400 });
+    }
+
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+        return Response.json({ error: "Request body must be a JSON object." }, { status: 400 });
+    }
+
+    const fields = body as Record<string, unknown>;
+    const ids = fields.ids;
+    if (!Array.isArray(ids) || ids.length === 0 || !ids.every((id): id is string => typeof id === "string")) {
+        return Response.json({ error: "Provide a non-empty array of user IDs." }, { status: 400 });
+    }
+
+    const data: { name?: string; email?: string; phoneNumber?: string; role?: string } = {};
+    for (const key of ["name", "email", "phoneNumber", "role"] as const) {
+        const value = fields[key];
+        if (value !== undefined) {
+            if (typeof value !== "string") {
+                return Response.json({ error: `${key} must be a string.` }, { status: 400 });
+            }
+            data[key] = value;
+        }
+    }
+
+    if (Object.keys(data).length === 0) {
+        return Response.json({ error: "Provide at least one field to update." }, { status: 400 });
+    }
+
+    const response = await prisma.user.updateMany({
+        where : {
+            id : { in: ids },
+        },
+        data,
+    });
+    return Response.json({ message: "Users updated successfully", updatedCount: response.count });
 }

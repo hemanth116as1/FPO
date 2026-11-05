@@ -104,7 +104,7 @@ export default function AddUser() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/users", {
+      const response = await fetch("/api/admin/users", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

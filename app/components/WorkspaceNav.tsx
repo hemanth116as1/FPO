@@ -54,6 +54,11 @@ export default function WorkspaceNav() {
           >
             Milk records
           </Link>
+          <Link
+            className={activePage === "home" ? styles.activeLink : styles.link}
+            href="/admin/usermodule/adduser"
+            aria-current={activePage === "home" ? "page" : undefined}
+          >User Module</Link>
           <button
             className={styles.signOut}
             type="button"

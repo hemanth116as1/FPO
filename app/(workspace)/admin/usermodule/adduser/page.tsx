@@ -19,7 +19,7 @@ export default function AddUserPage() {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
   const role = session?.user.role;
-  const canCreateMilk =
+  const canCreateUser =
     isAppRole(role) &&
     authClient.admin.checkRolePermission({
       role,
@@ -27,12 +27,12 @@ export default function AddUserPage() {
     });
 
   useEffect(() => {
-    if (!isPending && (!session || !canCreateMilk)) {
+    if (!isPending && (!session || !canCreateUser)) {
       router.replace("/home");
     }
-  }, [canCreateMilk, isPending, router, session]);
+  }, [canCreateUser, isPending, router, session]);
 
-  if (isPending || !session || !canCreateMilk) {
+  if (isPending || !session || !canCreateUser) {
     return <p role="status">Checking permissions...</p>;
   }
 
